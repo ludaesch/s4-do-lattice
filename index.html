@@ -140,6 +140,8 @@
     text-transform:uppercase;color:var(--ink-soft);padding-top:2px}
   dd{margin:0;font-size:15.5px;color:var(--ink)}
   dd .mono{font-family:"Spline Sans Mono",monospace;font-size:13.5px}
+  dt.ar{color:var(--accent)}
+  dd.ar{color:var(--accent);font-weight:600}
   .panel .note{
     margin-top:16px;padding-top:14px;border-top:1px solid var(--rule);
     font-size:14px;color:var(--ink-soft);font-style:italic
@@ -412,16 +414,29 @@ function showNode(id){
     else edgeEls[a+">"+b].classList.add("dim");
   });
   const i=INFO[id];
-  document.getElementById("ptag").textContent="Node · all five readings";
+  const READING={modal:"Modalities",do:"DO-Sem",doalt:"DO-Sem′",topo:"Topology",ctl:"CTL"};
+  // headline + subtitle speak the currently selected reading (as the edge readouts already do)
+  let head;
+  switch(current){
+    case "modal": head=i.mod; break;
+    case "doalt": {const r=i.rename.split(/ \(| \/ /)[0]; head=r.charAt(0).toUpperCase()+r.slice(1); break;}
+    case "topo":  head=i.topo.split(" — ")[0]; break;
+    case "ctl":   head=i.ctl; break;
+    default:      head=i.name;            // "do" — the paper's DO-Sem name
+  }
+  const sub = current==="modal" ? i.name : i.mod;   // keep the modal formula as the cross-tab anchor
+  const rows=[
+    ["do","DO term",i.do],
+    ["doalt","Suggested",i.rename],
+    ["topo","Topology",`<span class="mono">${i.topo}</span>`],
+    ["ctl","CTL",`<span class="mono">${i.ctl}</span> — ${i.ctlEn}`]
+  ];
+  const dlRows=rows.map(([k,label,val])=>{const a=(k===current)?' class="ar"':''; return `<dt${a}>${label}</dt><dd${a}>${val}</dd>`;}).join("");
+  document.getElementById("ptag").textContent="Node · "+READING[current];
   document.getElementById("panelBody").innerHTML=`
-    <h2>${i.name}</h2>
-    <p class="mod">${i.mod}</p>
-    <dl>
-      <dt>DO term</dt><dd>${i.do}</dd>
-      <dt>Suggested</dt><dd>${i.rename}</dd>
-      <dt>Topology</dt><dd class="mono">${i.topo}</dd>
-      <dt>CTL</dt><dd><span class="mono">${i.ctl}</span> — ${i.ctlEn}</dd>
-    </dl>
+    <h2>${head}</h2>
+    <p class="mod">${sub}</p>
+    <dl>${dlRows}</dl>
     <p class="note">${i.mean}</p>`;
 }
 
