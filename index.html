@@ -250,7 +250,7 @@ const INFO = {
   box:  {name:"Non-removable axiom", mod:"□t",   do:"non-removable axiom", rename:"permanent / invariant", topo:"i A — interior", ctl:"AG t", ctlEn:"t holds at every reachable state",
          mean:"Present in every reachable state. The strongest status; nothing below it.", purple:false},
   ibox: {name:"Theorem", mod:"□◇□t", do:"theorem (DO-truth)", rename:"robustly stable (keep ‘theorem’)", topo:"ici A", ctl:"AG EF AG t", ctlEn:"from every state, some reachable state has t holding ever after",
-         mean:"Robustly stabilizable: from anywhere a path exists into a region where t is forever stable. Liveness + safety (Alpern–Schneider).", purple:true},
+         mean:"Robustly stabilizable: from anywhere a path exists into a region where t is forever stable. Liveness + safety (Alpern–Schneider). The title’s pun lives here: the central ◇ is the diamond that guarantees the ‘forever’ (the final □); drop it and □◇□ collapses to □.", purple:true},
   bdia: {name:"Always derivable", mod:"□◇t", do:"always derivable", rename:"recurrent", topo:"ic A — regular open", ctl:"AG EF t", ctlEn:"from every reachable state, t is reachable again",
          mean:"Recurrence: re-derivable from every reachable state (GF, fairness). Incomparable with ‘provable’.", purple:true},
   dbox: {name:"Provable", mod:"◇□t", do:"provable", rename:"stabilizing / settles", topo:"ci A — regular closed", ctl:"EF AG t", ctlEn:"some reachable state has t holding ever after",
