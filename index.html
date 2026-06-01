@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S4 Modality Lattice · DO Semantics</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Spline+Sans+Mono:wght@400;500;600&family=Newsreader:ital,opsz@0,6..72;1,6..72&display=swap');
+
+  :root{
+    --bg:#f4f1ea;
+    --paper:#fbfaf6;
+    --ink:#23201c;
+    --ink-soft:#5c564d;
+    --rule:#d9d3c6;
+    --accent:#7c2d2d;       /* oxblood */
+    --accent-soft:#b04a3a;
+    --gray-node:#e7e2d6;
+    --gray-stroke:#b8b0a0;
+    --purple-node:#e4dde9;  /* the S4-only "stabilization" core */
+    --purple-stroke:#9a86ad;
+    --purple-ink:#5d4870;
+    --gray-ink:#4a443a;
+    --hi:#1f6f6b;           /* teal highlight for up-set */
+    --shadow:0 1px 0 rgba(0,0,0,.04), 0 8px 24px -16px rgba(0,0,0,.25);
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0}
+  body{
+    background:
+      radial-gradient(120% 80% at 50% -10%, #faf7f0 0%, var(--bg) 55%) fixed,
+      var(--bg);
+    color:var(--ink);
+    font-family:"Newsreader",Georgia,serif;
+    -webkit-font-smoothing:antialiased;
+    line-height:1.5;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:26px 26px 40px}
+
+  header{border-bottom:2px solid var(--ink);padding-bottom:11px;margin-bottom:4px}
+  .kicker{
+    font-family:"Spline Sans Mono",monospace;
+    font-size:11px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--accent);margin:0 0 6px
+  }
+  h1{
+    font-family:"Fraunces",serif;font-weight:600;
+    font-size:clamp(28px,4.6vw,46px);line-height:1.02;margin:0;
+    letter-spacing:-.01em
+  }
+  h1 em{font-style:italic;color:var(--accent)}
+  .sub{font-size:15px;color:var(--ink-soft);margin:8px 0 0;max-width:64ch}
+
+  /* tabs */
+  .tabs{display:flex;flex-wrap:wrap;gap:5px;margin:16px 0 2px}
+  .tab{
+    font-family:"Spline Sans Mono",monospace;font-size:11px;letter-spacing:.03em;
+    border:1px solid var(--rule);background:var(--paper);color:var(--ink-soft);
+    padding:5px 11px;border-radius:999px;cursor:pointer;transition:.18s;
+  }
+  .tab:hover{border-color:var(--gray-stroke);color:var(--ink)}
+  .tab[aria-selected="true"]{
+    background:var(--ink);color:var(--paper);border-color:var(--ink);
+  }
+  .tab small{opacity:.6}
+
+  .layout{display:grid;grid-template-columns:1.2fr .95fr;gap:22px;margin-top:12px}
+  @media (max-width:820px){.layout{grid-template-columns:1fr}}
+
+  .stage{
+    background:var(--paper);border:1px solid var(--rule);border-radius:14px;
+    box-shadow:var(--shadow);padding:6px 6px 2px;position:relative;overflow:hidden
+  }
+  .stage-inner{max-width:470px;margin:0 auto}
+  .stage::before{
+    content:"";position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background-image:radial-gradient(circle at 1px 1px, rgba(0,0,0,.035) 1px, transparent 0);
+    background-size:18px 18px
+  }
+  svg{display:block;width:100%;height:auto;position:relative}
+
+  /* nodes */
+  .node{cursor:pointer}
+  .node rect{
+    fill:var(--gray-node);stroke:var(--gray-stroke);stroke-width:1.1;
+    transition:transform .18s, filter .18s, fill .18s, stroke .18s;
+    transform-box:fill-box;transform-origin:center
+  }
+  .node.purple rect{fill:var(--purple-node);stroke:var(--purple-stroke)}
+  .node .lab{
+    font-family:"Spline Sans Mono",monospace;font-weight:600;
+    fill:var(--gray-ink);font-size:15px;text-anchor:middle;dominant-baseline:central;
+    pointer-events:none;transition:fill .18s
+  }
+  .node.purple .lab{fill:var(--purple-ink)}
+  .node:hover rect{filter:brightness(1.04);transform:translateY(-1px)}
+  .node.active rect{stroke:var(--accent);stroke-width:2.2}
+  .node.up rect{stroke:var(--hi);stroke-width:2}
+  .node.dim{opacity:.32}
+
+  /* edges */
+  .edge{stroke:var(--gray-stroke);stroke-width:1.4;fill:none;stroke-linecap:round;
+    transition:stroke .15s,stroke-width .15s,opacity .15s}
+  .edge.hot{stroke:var(--accent);stroke-width:2.6}
+  .edge.up{stroke:var(--hi);stroke-width:2.2}
+  .edge.dim{opacity:.25}
+  .edge-hit{stroke:transparent;stroke-width:16;fill:none;cursor:pointer}
+
+  .legend{
+    display:flex;gap:16px;flex-wrap:wrap;align-items:center;
+    font-family:"Spline Sans Mono",monospace;font-size:11px;color:var(--ink-soft);
+    padding:8px 10px 12px
+  }
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:13px;height:13px;border-radius:3px;border:1px solid}
+  .sw.g{background:var(--gray-node);border-color:var(--gray-stroke)}
+  .sw.p{background:var(--purple-node);border-color:var(--purple-stroke)}
+
+  /* side panel */
+  .panel{
+    background:var(--paper);border:1px solid var(--rule);border-radius:14px;
+    box-shadow:var(--shadow);padding:20px 20px 22px;align-self:start;
+    position:sticky;top:20px;min-height:300px
+  }
+  .panel .ptag{
+    font-family:"Spline Sans Mono",monospace;font-size:10.5px;letter-spacing:.18em;
+    text-transform:uppercase;color:var(--accent);margin:0 0 8px
+  }
+  .panel h2{
+    font-family:"Fraunces",serif;font-weight:600;font-size:25px;margin:0 0 2px;
+    letter-spacing:-.01em
+  }
+  .panel .mod{
+    font-family:"Spline Sans Mono",monospace;font-size:19px;font-weight:600;
+    color:var(--accent);margin:0 0 14px
+  }
+  dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:7px 14px}
+  dt{font-family:"Spline Sans Mono",monospace;font-size:10.5px;letter-spacing:.05em;
+    text-transform:uppercase;color:var(--ink-soft);padding-top:2px}
+  dd{margin:0;font-size:15.5px;color:var(--ink)}
+  dd .mono{font-family:"Spline Sans Mono",monospace;font-size:13.5px}
+  .panel .note{
+    margin-top:16px;padding-top:14px;border-top:1px solid var(--rule);
+    font-size:14px;color:var(--ink-soft);font-style:italic
+  }
+  .edge-readout{
+    font-family:"Newsreader",serif;font-size:17px;line-height:1.45;color:var(--ink)
+  }
+  .edge-readout .imp{font-family:"Spline Sans Mono",monospace;font-size:13px;
+    color:var(--accent);display:block;margin-bottom:7px}
+  .hint{font-size:13.5px;color:var(--ink-soft);font-style:italic}
+
+  footer{margin-top:26px;border-top:1px solid var(--rule);padding-top:14px;
+    font-size:13px;color:var(--ink-soft)}
+  footer code{font-family:"Spline Sans Mono",monospace;font-size:12px;
+    background:#efe9dd;padding:1px 5px;border-radius:4px}
+  .caption{font-size:13.5px;color:var(--ink-soft);margin:4px 4px 0;font-style:italic}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="kicker">S4 · Stabilization · DO Semantics</p>
+    <h1>The Seven Modalities, <em>One Lattice</em></h1>
+    <p class="sub">The same seven-node order under five readings. Switch the labels with the tabs; the geometry never moves, so a node <em>is</em> its modality, its topology, and its derivation status at once. Hover a node for every reading, hover an edge for what it asserts.</p>
+  </header>
+
+  <div class="tabs" role="tablist" id="tabs">
+    <button class="tab" role="tab" data-key="modal" aria-selected="true">Modalities</button>
+    <button class="tab" role="tab" data-key="do">DO-Sem</button>
+    <button class="tab" role="tab" data-key="doalt">DO-Sem′</button>
+    <button class="tab" role="tab" data-key="topo">Topology</button>
+    <button class="tab" role="tab" data-key="ctl">CTL</button>
+  </div>
+
+  <div class="layout">
+    <div>
+      <div class="stage">
+        <div class="stage-inner">
+        <svg id="svg" viewBox="0 0 560 432" aria-label="Hasse diagram of the seven S4 modalities">
+          <g id="edges"></g>
+          <g id="nodes"></g>
+        </svg>
+        <div class="legend">
+          <span><span class="sw g"></span> reachability / axiom corners</span>
+          <span><span class="sw p"></span> stabilization core — S4-only, collapses in S5</span>
+          <span style="color:var(--hi)">━ implies (hover a node)</span>
+        </div>
+        </div>
+      </div>
+      <p class="caption" id="caption"></p>
+    </div>
+
+    <aside class="panel" id="panel">
+      <p class="ptag" id="ptag">Hover the lattice</p>
+      <div id="panelBody">
+        <p class="hint">Move over any node to see its modality, DO term, topological operator, CTL form, and meaning. Move over any edge to read the implication it encodes. The strongest status (□t) sits at the bottom; implication flows upward.</p>
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    Orientation: strongest <code>□t</code> at the bottom, weakest <code>◇t</code> at the top, edges point up in the direction of implication (lower ⊢ upper) — standard Hasse convention. The published Figure 1 is drawn inverted. Companion to <em>Diamonds Are Forever: Stabilization Semantics for Unrestricted Aggregation and Recursion in Logica</em>.
+  </footer>
+</div>
+
+<script>
+// ---- node geometry (shared across all tabs) ----
+// id -> position + class. y grows downward; bottom = strongest.
+const N = {
+  box:     {x:280, y:380, purple:false},   // □t      (bottom, strongest)
+  ibox:    {x:280, y:300, purple:true },   // □◇□t
+  bdia:    {x:188, y:212, purple:true },   // □◇t   (always derivable)
+  dbox:    {x:372, y:212, purple:true },   // ◇□t   (provable)
+  cic:     {x:280, y:124, purple:true },   // ◇□◇t
+  dia:     {x:280, y:48,  purple:false},   // ◇t      (top, weakest)
+  id:      {x:84,  y:212, purple:false},   // t       (axiom, side)
+};
+
+// covering edges as [lower, upper] — lower implies upper
+const E = [
+  ["box","ibox"], ["ibox","bdia"], ["ibox","dbox"],
+  ["bdia","cic"], ["dbox","cic"], ["cic","dia"],
+  ["box","id"], ["id","dia"]
+];
+
+// up-set (transitive: everything a node implies), for hover highlight
+const UP = {
+  box:["ibox","bdia","dbox","cic","dia","id"],
+  ibox:["bdia","dbox","cic","dia"],
+  bdia:["cic","dia"],
+  dbox:["cic","dia"],
+  cic:["dia"],
+  id:["dia"],
+  dia:[]
+};
+
+// ---- the label sets (modal, two DO schemes, topological, CTL) ----
+const LABELS = {
+  modal: {box:"□t", ibox:"□◇□t", bdia:"□◇t", dbox:"◇□t", cic:"◇□◇t", dia:"◇t", id:"t"},
+  do:    {box:"non-rem.\naxiom", ibox:"theorem", bdia:"always\nderivable", dbox:"provable", cic:"not anti-\ntheorem", dia:"derivable", id:"axiom"},
+  doalt: {box:"permanent", ibox:"robustly\nstable", bdia:"recurrent", dbox:"stabilizing", cic:"not\nrefuted", dia:"transiently\nderivable", id:"present"},
+  topo:  {box:"i A", ibox:"ici A", bdia:"ic A", dbox:"ci A", cic:"cic A", dia:"c A", id:"A"},
+  ctl:   {box:"AG t", ibox:"AG EF AG t", bdia:"AG EF t", dbox:"EF AG t", cic:"EF AG EF t", dia:"EF t", id:"t"}
+};
+
+// full per-node detail
+const INFO = {
+  box:  {name:"Non-removable axiom", mod:"□t",   do:"non-removable axiom", rename:"permanent / invariant", topo:"i A — interior", ctl:"AG t", ctlEn:"t holds at every reachable state",
+         mean:"Present in every reachable state. The strongest status; nothing below it.", purple:false},
+  ibox: {name:"Theorem", mod:"□◇□t", do:"theorem (DO-truth)", rename:"robustly stable (keep ‘theorem’)", topo:"ici A", ctl:"AG EF AG t", ctlEn:"from every state, some reachable state has t holding ever after",
+         mean:"Robustly stabilizable: from anywhere a path exists into a region where t is forever stable. Liveness + safety (Alpern–Schneider).", purple:true},
+  bdia: {name:"Always derivable", mod:"□◇t", do:"always derivable", rename:"recurrent", topo:"ic A — regular open", ctl:"AG EF t", ctlEn:"from every reachable state, t is reachable again",
+         mean:"Recurrence: re-derivable from every reachable state (GF, fairness). Incomparable with ‘provable’.", purple:true},
+  dbox: {name:"Provable", mod:"◇□t", do:"provable", rename:"stabilizing / settles", topo:"ci A — regular closed", ctl:"EF AG t", ctlEn:"some reachable state has t holding ever after",
+         mean:"Stabilization: some derivation reaches a state where t stays (FG, persistence). Incomparable with ‘always derivable’. The highest-value rename — ‘provable’ wrongly suggests □ and inverts theorem ⟹ provable.", purple:true},
+  cic:  {name:"Not an anti-theorem", mod:"◇□◇t", do:"not anti-theorem", rename:"not refuted / consistent", topo:"cic A", ctl:"EF AG EF t", ctlEn:"some reachable state can always re-reach t thereafter",
+         mean:"t’s absence can never stabilize. Dual of ‘theorem’ under t ↦ ¬t.", purple:true},
+  dia:  {name:"Derivable", mod:"◇t", do:"derivable", rename:"transiently derivable / reachable", topo:"c A — closure", ctl:"EF t", ctlEn:"t holds at some reachable state",
+         mean:"Transient: present at some reachable state, may be retracted next step. The weakest status.", purple:false},
+  id:   {name:"Axiom", mod:"t", do:"axiom", rename:"present / current", topo:"A — the set itself", ctl:"t", ctlEn:"holds in the current state",
+         mean:"Holds in the current state. Self-dual axis of the lattice.", purple:false}
+};
+
+// edge explanations, per reading. doalt shares 'do'. topo uses ⊆; others ⟹.
+const EDGE_EXPL = {
+  "box>ibox": {
+    modal:"If t holds at every reachable state, then trivially from every state a state is reachable where t holds everywhere onward.",
+    do:"Every non-removable axiom is a theorem — a fact present everywhere can trivially be steered to permanence.",
+    topo:"The interior is contained in its own regularization.",
+    ctl:"AG t gives AG EF AG t: if t holds globally, then from every state some reachable state has t holding globally thereafter (take the state itself)."},
+  "ibox>bdia": {
+    modal:"A reachable permanent region for t implies, a fortiori, that t itself is reachable from every state.",
+    do:"Every theorem is always derivable — a reachable stable region means t itself is reachable from every state.",
+    topo:"Regularizing the open core lands inside regularizing the whole set.",
+    ctl:"AG EF AG t gives AG EF t: reaching a state where t holds ever after entails reaching a state where t holds."},
+  "ibox>dbox": {
+    modal:"Reachability of a permanent-t region from every state holds in particular at the initial state.",
+    do:"Every theorem is provable — a stable region reachable from every state is reachable from the axioms.",
+    topo:"The regular-open set built from A is contained in the regular-closed one.",
+    ctl:"AG EF AG t gives EF AG t: if every state can reach a forever-t region, the start can too."},
+  "bdia>cic": {
+    modal:"If t recurs from every state, then from somewhere that recurrence is itself permanent.",
+    do:"Everything always-derivable is not an anti-theorem — if t recurs everywhere, its absence can’t stabilize.",
+    topo:"The regular-open hull sits inside the regular-closed envelope.",
+    ctl:"AG EF t gives EF AG EF t: global recurrence of t entails a state from which t-recurrence holds ever after."},
+  "dbox>cic": {
+    modal:"A reachable permanent-t region is in particular a reachable region from which t stays reachable.",
+    do:"Every provable fact is not an anti-theorem — once t is pinned permanently, ¬t can never stabilize.",
+    topo:"The regular-closed set sits inside the regular-closed envelope.",
+    ctl:"EF AG t gives EF AG EF t: reaching a forever-t region entails reaching one from which t recurs ever after."},
+  "cic>dia": {
+    modal:"If some reachable state permanently re-reaches t, then t is reachable.",
+    do:"Anything not an anti-theorem is derivable — escaping refutation already requires t to surface somewhere.",
+    topo:"The regular-closed envelope is still inside the closure.",
+    ctl:"EF AG EF t gives EF t: if some reachable state can always re-reach t, then t is reachable."},
+  "box>id": {
+    modal:"Holding at every reachable state includes holding at the current one (reflexivity).",
+    do:"Every non-removable axiom is a current axiom — holding everywhere includes holding here.",
+    topo:"The interior of A is contained in A.",
+    ctl:"AG t gives t: holding at every reachable state includes the current state, since each state is reachable from itself."},
+  "id>dia": {
+    modal:"What holds now holds at a reachable state, namely now (reflexivity).",
+    do:"Every axiom is derivable — what holds now is reachable, right here.",
+    topo:"A is contained in its closure.",
+    ctl:"t gives EF t: what holds now holds at a reachable state — the current one."}
+};
+function edgeImp(key){
+  const [a,b]=key.split(">");
+  const r = current==="doalt" ? "do" : current;
+  const arrow = current==="topo" ? " ⊆ " : " ⟹ ";
+  const left = current==="topo" ? LABELS.topo[a] : LABELS[current][a].replace(/\n/g," ");
+  const right= current==="topo" ? LABELS.topo[b] : LABELS[current][b].replace(/\n/g," ");
+  return left+arrow+right;
+}
+function edgeText(key){
+  const r = current==="doalt" ? "do" : current;
+  return EDGE_EXPL[key][r] || EDGE_EXPL[key].do;
+}
+
+const CAPTIONS = {
+  modal:"Pure S4. The incomparable pair □◇t / ◇□t is exactly what S5 would collapse onto ◇t / □t.",
+  do:"Figure 1’s derivation-status reading. Note ‘provable’ = ◇□, not □ — the one real terminology pitfall.",
+  doalt:"Suggested stability-scheme renames (§6). Defuses the ‘provable’ pitfall and matches the liveness+safety framing; ‘theorem’ is kept.",
+  topo:"McKinsey–Tarski: interior i and closure c. Every edge becomes set inclusion ⊆. ic / ci are the regularization operators.",
+  ctl:"Branching-time reading on the derivation graph. □ = AG, ◇ = EF. DO-truth is AG EF AG t."
+};
+
+const NS="http://www.w3.org/2000/svg";
+const nodesG=document.getElementById("nodes");
+const edgesG=document.getElementById("edges");
+const W=92,H=46; // node box size
+let current="modal";
+
+function center(id){return {x:N[id].x, y:N[id].y};}
+
+// build edges (visible + fat invisible hit line)
+const edgeEls={};
+E.forEach(([a,b])=>{
+  const A=center(a),B=center(b);
+  const key=a+">"+b;
+  const line=document.createElementNS(NS,"line");
+  line.setAttribute("x1",A.x);line.setAttribute("y1",A.y);
+  line.setAttribute("x2",B.x);line.setAttribute("y2",B.y);
+  line.setAttribute("class","edge");line.dataset.key=key;
+  const hit=document.createElementNS(NS,"line");
+  hit.setAttribute("x1",A.x);hit.setAttribute("y1",A.y);
+  hit.setAttribute("x2",B.x);hit.setAttribute("y2",B.y);
+  hit.setAttribute("class","edge-hit");hit.dataset.key=key;
+  edgesG.appendChild(line);edgesG.appendChild(hit);
+  edgeEls[key]=line;
+  hit.addEventListener("mouseenter",()=>showEdge(key));
+  hit.addEventListener("mouseleave",resetPanel);
+});
+
+// build nodes
+const nodeEls={};
+Object.keys(N).forEach(id=>{
+  const {x,y,purple}=N[id];
+  const g=document.createElementNS(NS,"g");
+  g.setAttribute("class","node"+(purple?" purple":""));
+  g.dataset.id=id;
+  const r=document.createElementNS(NS,"rect");
+  r.setAttribute("x",x-W/2);r.setAttribute("y",y-H/2);
+  r.setAttribute("width",W);r.setAttribute("height",H);r.setAttribute("rx",9);
+  g.appendChild(r);
+  const t=document.createElementNS(NS,"text");
+  t.setAttribute("x",x);t.setAttribute("y",y);t.setAttribute("class","lab");
+  g.appendChild(t);
+  nodesG.appendChild(g);
+  nodeEls[id]=g;
+  g.addEventListener("mouseenter",()=>showNode(id));
+  g.addEventListener("mouseleave",resetPanel);
+});
+
+function setLabel(id){
+  const txt=LABELS[current][id];
+  const el=nodeEls[id].querySelector(".lab");
+  el.textContent="";
+  const lines=txt.split("\n");
+  const fs = (current==="modal"||current==="topo") ? 15 : 12.5;
+  el.style.fontSize=fs+"px";
+  lines.forEach((ln,i)=>{
+    const ts=document.createElementNS(NS,"tspan");
+    ts.setAttribute("x",N[id].x);
+    ts.setAttribute("dy",i===0 ? (-(lines.length-1)*7) : 14);
+    ts.textContent=ln;
+    el.appendChild(ts);
+  });
+}
+
+function renderLabels(){Object.keys(N).forEach(setLabel);document.getElementById("caption").textContent=CAPTIONS[current];}
+
+function clearStates(){
+  Object.values(nodeEls).forEach(g=>g.classList.remove("active","up","dim"));
+  Object.values(edgeEls).forEach(e=>e.classList.remove("hot","up","dim"));
+}
+
+function showNode(id){
+  clearStates();
+  const up=UP[id];
+  nodeEls[id].classList.add("active");
+  Object.keys(nodeEls).forEach(k=>{
+    if(k!==id && !up.includes(k)) nodeEls[k].classList.add("dim");
+  });
+  up.forEach(k=>nodeEls[k].classList.add("up"));
+  // highlight edges that lie on an implication path from id (cover edges into up-set ∪ id)
+  E.forEach(([a,b])=>{
+    const onPath = (a===id||up.includes(a)) && (b===id||up.includes(b));
+    if(onPath) edgeEls[a+">"+b].classList.add("up");
+    else edgeEls[a+">"+b].classList.add("dim");
+  });
+  const i=INFO[id];
+  document.getElementById("ptag").textContent="Node · all five readings";
+  document.getElementById("panelBody").innerHTML=`
+    <h2>${i.name}</h2>
+    <p class="mod">${i.mod}</p>
+    <dl>
+      <dt>DO term</dt><dd>${i.do}</dd>
+      <dt>Suggested</dt><dd>${i.rename}</dd>
+      <dt>Topology</dt><dd class="mono">${i.topo}</dd>
+      <dt>CTL</dt><dd><span class="mono">${i.ctl}</span> — ${i.ctlEn}</dd>
+    </dl>
+    <p class="note">${i.mean}</p>`;
+}
+
+function showEdge(key){
+  clearStates();
+  edgeEls[key].classList.add("hot");
+  const [a,b]=key.split(">");
+  nodeEls[a].classList.add("active");
+  nodeEls[b].classList.add("active");
+  Object.keys(nodeEls).forEach(k=>{if(k!==a&&k!==b)nodeEls[k].classList.add("dim")});
+  Object.keys(edgeEls).forEach(k=>{if(k!==key)edgeEls[k].classList.add("dim")});
+  const imp=edgeImp(key), txt=edgeText(key);
+  document.getElementById("ptag").textContent="Edge · implication ("+(current==="doalt"?"DO-Sem′":current==="do"?"DO-Sem":current)+")";
+  document.getElementById("panelBody").innerHTML=`
+    <div class="edge-readout"><span class="imp">${imp}</span>${txt}</div>`;
+}
+
+function resetPanel(){
+  clearStates();
+  document.getElementById("ptag").textContent="Hover the lattice";
+  document.getElementById("panelBody").innerHTML=`<p class="hint">Move over any node to see its modality, DO term, topological operator, CTL form, and meaning. Move over any edge to read the implication it encodes.</p>`;
+}
+
+// tabs
+document.querySelectorAll(".tab").forEach(btn=>{
+  btn.addEventListener("click",()=>{
+    document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected","false"));
+    btn.setAttribute("aria-selected","true");
+    current=btn.dataset.key;
+    renderLabels();
+  });
+});
+
+renderLabels();
+</script>
+</body>
+</html>
