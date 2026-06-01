@@ -424,7 +424,13 @@ function showNode(id){
     case "ctl":   head=i.ctl; break;
     default:      head=i.name;            // "do" — the paper's DO-Sem name
   }
-  const sub = current==="modal" ? i.name : i.mod;   // keep the modal formula as the cross-tab anchor
+  // generic alethic reading of the modal formula (□ = "necessarily", ◇ = "possibly")
+  const modGloss = m => { const w=[...m].map(c=>c==="□"?"necessarily":c==="◇"?"possibly":"").filter(Boolean); return w.length ? w.join(" ")+" t" : "t (no modal operator)"; };
+  // subtitle = the modal-formula identity on every tab; on the Modalities tab (where the
+  // headline already IS the formula) it becomes the plain necessarily/possibly reading.
+  const sub = current==="modal"
+    ? `<span style="font-family:'Newsreader',serif;font-style:italic;font-weight:400;font-size:16px">${modGloss(i.mod)}</span>`
+    : i.mod;
   const rows=[
     ["do","DO term",i.do],
     ["doalt","Suggested",i.rename],
